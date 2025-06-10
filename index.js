@@ -63,68 +63,46 @@ async function sendMessage(message, buttonText = null, buttonUrl = null) {
   }
 }
 
-// Status emoji mapping
+// Enhanced status emoji mapping for all Railway events
 const statusEmojis = {
   SUCCESS: "✅",
-  BUILDING: "⚒️",
+  BUILDING: "⚒️", 
   DEPLOYING: "🚀",
   CRASHED: "❌",
   FAILED: "💥",
   QUEUED: "⏳",
   REMOVED: "🗑️",
+  REMOVING: "🔄",
   SKIPPED: "⏭️",
+  INITIALIZED: "🎯",
+  WAITING: "⏸️",
+  SLEEPING: "😴",
+  "AWAITING_APPROVAL": "⏰"
 };
 
-// Format deployment message
-function formatDeploymentMessage(data) {
-  const emoji = statusEmojis[data.status] || "ℹ️";
-  const projectName = data.project?.name || "Unknown Project";
-  const environment = data.environment?.name || "Unknown Environment";
-  const creator = data.deployment?.creator?.name || "Unknown Creator";
-  const deploymentId = data.deployment?.id || "Unknown";
-  const timestamp = new Date().toLocaleString();
-
-  return `<b>🚂 Railway Deployment</b>
-
-<b>Project:</b> <code>${projectName}</code>
-${emoji} <b>Status:</b> <code>${data.status}</code>
-🌳 <b>Environment:</b> <code>${environment}</code>
-👨‍💻 <b>Creator:</b> <code>${creator}</code>
-🆔 <b>Deployment ID:</b> <code>${deploymentId}</code>
-🕐 <b>Time:</b> <code>${timestamp}</code>`;
-}
-
-// Main webhook handler
+// Handle all deployment events
 app.post("/webhook", async (req, res) => {
   try {
     const data = req.body;
     
     console.log("Received webhook:", JSON.stringify(data, null, 2));
 
-    // Validate webhook payload
-    if (!data || !data.type) {
-      console.log("Invalid webhook payload - missing type");
-      return res.status(400).json({ error: "Invalid payload" });
-    }
-
-    // Handle deployment events
     if (data.type === "DEPLOY") {
-      const message = formatDeploymentMessage(data);
+      const emoji = statusEmojis[data.status] || "ℹ️";
+      const message = `<b>🚂 Railway Deployment</b>
+
+<b>Project:</b> <code>${data.project?.name || "Unknown"}</code>
+${emoji} <b>Status:</b> <code>${data.status}</code>
+🌳 <b>Environment:</b> <code>${data.environment?.name || "Unknown"}</code>
+👨‍💻 <b>Creator:</b> <code>${data.deployment?.creator?.name || "Unknown"}</code>
+🕐 <b>Time:</b> <code>${new Date().toLocaleString()}</code>`;
+
       const projectId = data.project?.id;
       const buttonUrl = projectId 
         ? `https://railway.app/project/${projectId}/deployments`
         : "https://railway.app";
 
       await sendMessage(message, "View Project", buttonUrl);
-    } 
-    // Handle service events (if needed)
-    else if (data.type === "SERVICE") {
-      console.log("Service event received:", data.status);
-      // Add service-specific handling if needed
-    }
-    // Handle other event types
-    else {
-      console.log("Unhandled event type:", data.type, "Status:", data.status);
     }
 
     res.status(200).json({ success: true });
@@ -133,6 +111,7 @@ app.post("/webhook", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 // Health check endpoint
 app.get("/health", (req, res) => {
@@ -151,14 +130,6 @@ app.get("/", (req, res) => {
       webhook: "POST /webhook",
       health: "GET /health"
     }
-  });
-});
-
-// Handle webhook GET requests
-app.get("/webhook", (req, res) => {
-  res.status(405).json({
-    error: "Method Not Allowed",
-    message: "This endpoint only accepts POST requests"
   });
 });
 
